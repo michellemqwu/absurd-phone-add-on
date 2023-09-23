@@ -14,36 +14,47 @@ import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
 import android.widget.Button
+import android.widget.TextView
 import androidx.activity.ComponentActivity
 import com.felhr.usbserial.UsbSerialDevice
 import com.felhr.usbserial.UsbSerialInterface
+
 var serialDevice : UsbSerialDevice? = null
+var numNotification = 0;
 
 class NotificationListener : NotificationListenerService() {
     override fun onCreate() {
         super.onCreate()
-        // Your initialization code here
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        // Your cleanup code here
     }
 
     override fun onListenerConnected() {
+        numNotification = 0
         super.onListenerConnected()
+        numNotification = activeNotifications.size
+        sendSerialToUsb(numNotification.toString())
+        // TODO write code for display total number on screen
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         super.onNotificationPosted(sbn)
+        numNotification += 1
+        sendSerialToUsb(numNotification.toString())
+        // TODO write code for display total number on screen
+    }
 
-        sbn?.let { notification ->
-            val notificationText = notification.notification?.extras?.getCharSequence("android.text").toString()
-            serialDevice?.write(notificationText.toByteArray())
-            // Log the notification text to the console
-            Log.d("NotificationListener", "Received Notification: $notificationText")
+    override fun onNotificationRemoved(sbn: StatusBarNotification?) {
+        super.onNotificationRemoved(sbn)
+        numNotification -= 1
+        sendSerialToUsb(numNotification.toString())
+        // TODO write code for display total number on screen
+    }
 
-        }
+    private fun sendSerialToUsb(data: String) {
+        serialDevice?.write(data.toByteArray())
     }
 }
 
@@ -52,9 +63,9 @@ class MainActivity : ComponentActivity() {
     var device : UsbDevice? = null
     var deviceConnection:UsbDeviceConnection? = null
     val ACTION_USB_PERMISSION = "permission"
+    var notificationListener: NotificationListener? =  null
+    var connected = false
     override fun onCreate(savedInstanceState: Bundle?) {
-        var firstNameFocused : Boolean = false
-        var lastNameFocused : Boolean = false
 
         super.onCreate(savedInstanceState)
         setContentView(R.layout.layout)
@@ -66,38 +77,22 @@ class MainActivity : ComponentActivity() {
         filter.addAction(UsbManager.ACTION_USB_ACCESSORY_ATTACHED)
         registerReceiver(broadcastReceiver, filter)
 
-//        val firstNameElement = findViewById<EditText>(R.id.firstName)
-//        firstNameElement.setOnFocusChangeListener{_, hasFocus:Boolean ->
-//            if (hasFocus && !firstNameFocused){
-//                firstNameElement.text.clear()
-//                firstNameFocused=true
-//            }
-//        }
-
-//        val lastNameElement = findViewById<EditText>(R.id.lastName)
-//        lastNameElement.setOnFocusChangeListener{_, hasFocus:Boolean ->
-//            if (hasFocus && !lastNameFocused){
-//                lastNameElement.text.clear()
-//                lastNameFocused=true
-//            }
-//        }
-
         val btn = findViewById<Button>(R.id.button)
-        //val connectBtn = findViewById<Button>(R.id.connectBtn)
         btn.setOnClickListener{
             connect()
         }
 
-//        btn.setOnClickListener{
-//            Toast.makeText(this,firstNameElement.text.toString()+" " + lastNameElement.text.toString(),Toast.LENGTH_SHORT).show()
-//        }
+        val btnDisconnect = findViewById<Button>(R.id.disconnectButton)
+        btnDisconnect.setOnClickListener{
+            disconnect()
+        }
 
     }
 
     private fun connect(){
         try{
-            Log.i("serial", "HELLO IM IN CONNECT")
             val usbDevices : HashMap<String, UsbDevice>? = usbManager.deviceList
+            val textElement = findViewById<TextView>(R.id.text)
             if(!usbDevices?.isEmpty()!!){
                 var keep = true
                 usbDevices.forEach{entry->
@@ -105,18 +100,14 @@ class MainActivity : ComponentActivity() {
                     device = entry.value
                     val deviceVendorID : Int? = device?.vendorId
                     Log.i("serial",""+deviceVendorID)
-//                    if(deviceVendorID==1027){
 
                     val intent:PendingIntent = PendingIntent.getBroadcast(this,0,Intent(ACTION_USB_PERMISSION), FLAG_MUTABLE)
                     usbManager.requestPermission(device,intent)
                     keep = false
+                    connected = true
+                    textElement.setText("connection successful")
                     Log.i("serial","Connection successful")
 
-//                    } else {
-//                        deviceConnection = null
-//                        device = null
-
-//                    }
                 }
 
                 if(!keep) {
@@ -124,9 +115,10 @@ class MainActivity : ComponentActivity() {
                 }
             } else {
                 Log.i("serial","nothing connected")
+                textElement.setText("nothing connected")
             }
         } catch (e:Exception){
-            //findViewById<TextView>(R.id.textView).setText(e.toString())
+            findViewById<TextView>(R.id.text).setText(e.toString())
         }
     }
     private fun sendData(msg:String){
@@ -135,6 +127,8 @@ class MainActivity : ComponentActivity() {
     }
     private fun disconnect(){
         serialDevice?.close()
+        val textElement = findViewById<TextView>(R.id.text)
+        textElement.setText("disconnected")
     }
     private val broadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
