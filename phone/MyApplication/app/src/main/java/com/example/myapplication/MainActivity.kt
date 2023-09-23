@@ -20,11 +20,14 @@ import com.felhr.usbserial.UsbSerialDevice
 import com.felhr.usbserial.UsbSerialInterface
 
 var serialDevice : UsbSerialDevice? = null
-var numNotification = 0;
+var numNotification = 0
+var textBox : TextView? = null
+var displayString : String = ""
 
 class NotificationListener : NotificationListenerService() {
     override fun onCreate() {
         super.onCreate()
+        Log.i("serial","hi this is notification listener")
     }
 
     override fun onDestroy() {
@@ -35,22 +38,30 @@ class NotificationListener : NotificationListenerService() {
         numNotification = 0
         super.onListenerConnected()
         numNotification = activeNotifications.size
-        sendSerialToUsb(numNotification.toString())
-        // TODO write code for display total number on screen
+        var placeholderString : String = "starting-$numNotification"
+        sendSerialToUsb(placeholderString)
+
+        Log.i("serial","notification listener connected, current notifications: $numNotification")
+
+        displayString = "notification listener connected"
+        textBox?.text = displayString
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         super.onNotificationPosted(sbn)
         numNotification += 1
         sendSerialToUsb(numNotification.toString())
-        // TODO write code for display total number on screen
+
+        displayString = "new notification RECEIVED, total number of notifications: $numNotification"
+        textBox?.text = displayString
     }
 
     override fun onNotificationRemoved(sbn: StatusBarNotification?) {
         super.onNotificationRemoved(sbn)
         numNotification -= 1
         sendSerialToUsb(numNotification.toString())
-        // TODO write code for display total number on screen
+        displayString = "notification REMOVED, total number of notifications: $numNotification"
+        textBox?.text = displayString
     }
 
     private fun sendSerialToUsb(data: String) {
@@ -63,12 +74,13 @@ class MainActivity : ComponentActivity() {
     var device : UsbDevice? = null
     var deviceConnection:UsbDeviceConnection? = null
     val ACTION_USB_PERMISSION = "permission"
-    var notificationListener: NotificationListener? =  null
     var connected = false
     override fun onCreate(savedInstanceState: Bundle?) {
 
         super.onCreate(savedInstanceState)
         setContentView(R.layout.layout)
+
+        Log.i("seiral", "hi")
 
         usbManager = getSystemService(Context.USB_SERVICE) as UsbManager
         val filter = IntentFilter()
@@ -86,6 +98,7 @@ class MainActivity : ComponentActivity() {
         btnDisconnect.setOnClickListener{
             disconnect()
         }
+        textBox = findViewById<TextView>(R.id.textOutput)
 
     }
 
@@ -105,7 +118,7 @@ class MainActivity : ComponentActivity() {
                     usbManager.requestPermission(device,intent)
                     keep = false
                     connected = true
-                    textElement.setText("connection successful")
+                    textElement.text = "connection successful"
                     Log.i("serial","Connection successful")
 
                 }
