@@ -38,18 +38,17 @@ class NotificationListener : NotificationListenerService() {
         numNotification = 0
         super.onListenerConnected()
         numNotification = activeNotifications.size
-        var placeholderString : String = "starting-$numNotification"
-        sendSerialToUsb(placeholderString)
+        sendSerialToUsb(numNotification.toString())
 
         Log.i("serial","notification listener connected, current notifications: $numNotification")
 
-        displayString = "notification listener connected"
+        displayString = "notification listener connected, current notifications: $numNotification"
         textBox?.text = displayString
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         super.onNotificationPosted(sbn)
-        numNotification += 1
+        numNotification = activeNotifications.size
         sendSerialToUsb(numNotification.toString())
 
         displayString = "new notification RECEIVED, total number of notifications: $numNotification"
@@ -58,7 +57,7 @@ class NotificationListener : NotificationListenerService() {
 
     override fun onNotificationRemoved(sbn: StatusBarNotification?) {
         super.onNotificationRemoved(sbn)
-        numNotification -= 1
+        numNotification = activeNotifications.size
         sendSerialToUsb(numNotification.toString())
         displayString = "notification REMOVED, total number of notifications: $numNotification"
         textBox?.text = displayString
