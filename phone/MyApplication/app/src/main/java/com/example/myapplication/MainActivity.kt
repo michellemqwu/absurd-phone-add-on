@@ -64,6 +64,7 @@ class NotificationListener : NotificationListenerService() {
     }
 
     private fun sendSerialToUsb(data: String) {
+        Log.i("Serial","sending to serial")
         serialDevice?.write(data.toByteArray())
     }
 }
